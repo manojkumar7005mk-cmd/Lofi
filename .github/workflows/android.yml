@@ -1,27 +1,42 @@
-name: Android Debug APK
-on: [push, pull_request, workflow_dispatch]
-env:
-  # PIN: set to revisions you have verified build together (mtmd API needs a recent llama.cpp).
-  LLAMA_CPP_REF: b6000
-  WHISPER_CPP_REF: v1.7.5
+name: Android Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 17 }
-      - uses: android-actions/setup-android@v3
-      - name: SDK / NDK / CMake
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
-      - name: Native dependencies (pinned)
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android SDK packages
         run: |
-          T=app/src/main/cpp/third_party; mkdir -p $T
-          git clone --depth 1 --branch "$LLAMA_CPP_REF" https://github.com/ggml-org/llama.cpp $T/llama.cpp
-          git clone --depth 1 --branch "$WHISPER_CPP_REF" https://github.com/ggml-org/whisper.cpp $T/whisper.cpp
-      - uses: gradle/actions/setup-gradle@v4
-        with: { gradle-version: "8.9" }
-      - run: gradle wrapper --gradle-version 8.9
-      - run: ./gradlew assembleDebug --no-daemon
-      - uses: actions/upload-artifact@v4
-        with: { name: LoFi-4A-Core-debug-apk, path: app/build/outputs/apk/debug/*.apk }
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmake;3.22.1" "ndk;27.2.12479018"
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Build APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoFi-4A-Core-debug
+          path: app/build/outputs/apk/debug/*.apk
