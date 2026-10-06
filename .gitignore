@@ -1,0 +1,6 @@
+build/
+.gradle/
+local.properties
+app/src/main/cpp/third_party/
+gradle/wrapper/
+gradlew*
